@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RadarTV - Ao Vivo</title>
+    <!-- Biblioteca HLS.js essencial para rodar o formato .m3u8 em navegadores -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        body { 
+            background-color: #111; 
+            color: #fff; 
+            font-family: Arial, sans-serif; 
+            text-align: center; 
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        video { 
+            width: 100%; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.8); 
+            background-color: #000;
+        }
+        .info-webtv { 
+            margin-top: 20px; 
+            padding: 15px; 
+            background: #222; 
+            border-radius: 8px; 
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+        }
+        .info-webtv p { margin: 10px; font-size: 16px; }
+        .info-webtv span { font-weight: bold; color: #e50914; } /* Vermelho estilo streaming */
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>RadarTV - Ao Vivo</h2>
+
+        <!-- Player de Vídeo -->
+        <video id="video-player" controls autoplay muted></video>
+
+        <!-- Informações puxadas do api.xml -->
+        <div class="info-webtv">
+            <p>Status: <span id="tv-status" style="color: #00ff00;">Carregando...</span></p>
+            <p>🔴 Ao Vivo: <span id="tv-online">0</span> espectadores</p>
+            <p>👁️ Visitas: <span id="tv-views">0</span></p>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // 1. CONFIGURAÇÃO DO VÍDEO (.m3u8)
+        // ==========================================
+        var video = document.getElementById('video-player');
+        
+        // COLOQUE SEU LINK .m3u8 AQUI DENTRO DAS ASPAS:
+        var videoSrc = 'SEU_LINK_M3U8_AQUI'; 
+
+        if (Hls.isSupported()) {
+            var hls = new Hls();
+            hls.loadSource(videoSrc);
+            hls.attachMedia(video);
+            hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                video.play();
+            });
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            // Suporte nativo para Safari / iOS
+            video.src = videoSrc;
+            video.addEventListener('loadedmetadata', function() {
+                video.play();
+            });
+        }
+
+        // ==========================================
+        // 2. LEITURA DO SEU api.xml
+        // ==========================================
+        function carregarDadosWebTV() {
+            fetch('api.xml') 
+                .then(response => response.text())
+                .then(str => {
+                    let parser = new DOMParser();
+                    let xml = parser.parseFromString(str, "text/xml");
+
+                    // Pega os dados das tags que você criou no XML
+                    let status = xml.getElementsByTagName("status")[0].textContent;
+                    let espectadores = xml.getElementsByTagName("espectadores_online")[0].textContent;
+                    let visualizacoes = xml.getElementsByTagName("visualizacoes_totais")[0].textContent;
+
+                    // Atualiza o HTML
+                    document.getElementById("tv-status").innerText = status;
+                    document.getElementById("tv-online").innerText = espectadores;
+                    document.getElementById("tv-views").innerText = visualizacoes;
+                })
+                .catch(erro => console.error("Erro ao carregar o XML:", erro));
+        }
+
+        // Roda a função na hora que abre a página
+        carregarDadosWebTV();
+        
+        // Fica checando o XML a cada 60 segundos para ver se você mudou os números
+        setInterval(carregarDadosWebTV, 60000); 
+    </script>
+</body>
+</html>
