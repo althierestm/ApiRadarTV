@@ -1,8 +1,8 @@
 {
   "connections": 6,
-  "active_connections": 7,
-  "viewers": 7,
-  "online": 9,
+  "active_connections": 177,
+  "viewers": 177,
+  "online": 179,
   "stream": {
     "active": true,
     "clients": 10
