@@ -1,0 +1,10 @@
+{
+  "connections": 1500,
+  "active_connections": 1500,
+  "viewers": 1500,
+  "online": 1500,
+  "stream": {
+    "active": true,
+    "clients": 1500
+  }
+}
