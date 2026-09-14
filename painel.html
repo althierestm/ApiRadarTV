@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Painel Adm - Audiência</title>
+    <style>
+        body { font-family: Arial; background: #222; color: #fff; padding: 30px; text-align: center; }
+        input, button { padding: 10px; font-size: 16px; margin: 5px; }
+        .status { margin-top: 20px; font-size: 18px; color: #0f0; }
+    </style>
+</head>
+<body>
+
+    <h2>Controle de Audiência WebTV</h2>
+    <label>Número Base:</label>
+    <input type="number" id="baseInput" value="10">
+    <button onclick="iniciarAutomacao()">Iniciar Automação</button>
+
+    <div class="status" id="statusLog">Aguardando início...</div>
+    <div style="margin-top: 15px;">Espectadores agora: <strong id="numeroAtualView">0</strong></div>
+
+    <script type="module">
+        // Importe os SDKs do Firebase (versão compatível com módulos)
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
+        import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-database.js";
+
+        // Substitua com as credenciais do seu projeto Firebase
+        const firebaseConfig = {
+            databaseURL: "https://SEU-PROJETO.firebaseio.com"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        let intervalo;
+        let numeroAtual = 0;
+        let rodando = false;
+
+        // URL da sua API original (para copiar os outros dados)
+        const urlApiReal = "COLOQUE_URL_DA_API_REAL_AQUI"; 
+
+        window.iniciarAutomacao = function() {
+            if (rodando) return;
+            rodando = true;
+            let inputBase = parseInt(document.getElementById("baseInput").value);
+            numeroAtual = inputBase; // Inicia no número base exato
+            
+            document.getElementById("statusLog").innerText = "Automação Rodando... (Atualiza a cada 2 min)";
+            
+            executarCiclo(); // Roda a primeira vez imediatamente
+            intervalo = setInterval(executarCiclo, 120000); // Roda a cada 2 minutos
+        };
+
+        async function executarCiclo() {
+            let numeroBase = parseInt(document.getElementById("baseInput").value);
+            
+            // Lógica de Oscilação Suave (Limites absolutos)
+            let limiteMax = numeroBase + 7;
+            let limiteMin = (numeroBase - 2 < 0) ? 0 : numeroBase - 2;
+
+            // Sorteia um degrau suave (cai 1, mantém 0, sobe 1 ou 2)
+            let passo = Math.floor(Math.random() * 4) - 1; 
+            numeroAtual += passo;
+
+            // Travas para não estourar os limites da oscilação
+            if (numeroAtual > limiteMax) numeroAtual = limiteMax;
+            if (numeroAtual < limiteMin) numeroAtual = limiteMin;
+
+            document.getElementById("numeroAtualView").innerText = numeroAtual;
+
+            try {
+                // 1. Puxa os dados reais da sua infraestrutura
+                let respostaReal = await fetch(urlApiReal);
+                let dadosReais = await respostaReal.json();
+
+                // 2. Substitui APENAS os números de espectadores pelo nosso número atualizado
+                dadosReais.connections = numeroAtual;
+                dadosReais.active_connections = numeroAtual;
+                dadosReais.viewers = numeroAtual;
+                dadosReais.online = numeroAtual;
+                if (dadosReais.stream) {
+                    dadosReais.stream.clients = numeroAtual;
+                }
+
+                // 3. Salva o pacote completo no Firebase
+                await set(ref(db, 'stats'), dadosReais);
+                console.log("Dados sincronizados com o Firebase às " + new Date().toLocaleTimeString());
+
+            } catch (erro) {
+                console.error("Erro ao sincronizar:", erro);
+            }
+        }
+    </script>
+</body>
+</html>
