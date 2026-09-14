@@ -41,20 +41,16 @@
 
     <div class="container">
         <h2>RadarTV - Ao Vivo</h2>
-
         <video id="video-player" controls autoplay muted></video>
 
         <div class="info-webtv">
             <p>Status: <span id="tv-status" style="color: #00ff00;">Carregando...</span></p>
             <p>🔴 Ao Vivo: <span id="tv-online">0</span> espectadores</p>
-            <p>👁️ Visitas: <span id="tv-views">0</span></p>
         </div>
     </div>
 
     <script>
         var video = document.getElementById('video-player');
-        
-        // Link m3u8 inserido aqui
         var videoSrc = 'https://www.latinasat.com.br/hls/live/stream/index.m3u8'; 
 
         if (Hls.isSupported()) {
@@ -71,25 +67,26 @@
             });
         }
 
+        
         function carregarDadosWebTV() {
-            fetch('api.xml') 
-                .then(response => response.text())
-                .then(str => {
-                    let parser = new DOMParser();
-                    let xml = parser.parseFromString(str, "text/xml");
-
-                    let status = xml.getElementsByTagName("status")[0].textContent;
-                    let espectadores = xml.getElementsByTagName("espectadores_online")[0].textContent;
-                    let visualizacoes = xml.getElementsByTagName("visualizacoes_totais")[0].textContent;
-
-                    document.getElementById("tv-status").innerText = status;
-                    document.getElementById("tv-online").innerText = espectadores;
-                    document.getElementById("tv-views").innerText = visualizacoes;
+           
+            fetch('https://radaraudiencia-default-rtdb.firebaseio.com/stats.json') 
+                .then(response => response.json())
+                .then(dados => {
+                    if (dados && dados.viewers !== undefined) {
+                        document.getElementById("tv-online").innerText = dados.viewers;
+                        
+                        let isOnline = dados.stream && dados.stream.active;
+                        let tvStatus = document.getElementById("tv-status");
+                        tvStatus.innerText = isOnline ? "Online" : "Offline";
+                        tvStatus.style.color = isOnline ? "#00ff00" : "#ff0000";
+                    }
                 })
-                .catch(erro => console.error("Erro ao carregar o XML:", erro));
+                .catch(erro => console.error("Erro ao carregar a audiência:", erro));
         }
 
         carregarDadosWebTV();
+        
         setInterval(carregarDadosWebTV, 60000); 
     </script>
 </body>
